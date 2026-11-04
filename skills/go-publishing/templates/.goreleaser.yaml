@@ -1,0 +1,18 @@
+version: 2
+project_name: {{COMMAND}}
+builds:
+  - main: {{CMD_PATH}}   # e.g. ./cmd/{{COMMAND}}
+    binary: {{COMMAND}}
+    env: [CGO_ENABLED=0]
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    ldflags: ["-s -w -X main.version={{.Version}}"]
+archives:
+  - formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+release:
+  prerelease: auto
+checksum:
+  name_template: checksums.txt

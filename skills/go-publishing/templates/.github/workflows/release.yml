@@ -1,0 +1,28 @@
+name: release
+# Runs when a v* tag is pushed. Push the tag only after CI is green on main and the CHANGELOG.md entry exists.
+on:
+  push:
+    tags: ["v*"]
+permissions:
+  contents: write   # to create the GitHub release
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with: { go-version-file: go.mod }
+      - name: The tag must have a CHANGELOG entry
+        run: scripts/release_notes.sh "$GITHUB_REF_NAME" > "$RUNNER_TEMP/release-notes.md"   # outside the checkout: GoReleaser fails on a dirty tree
+      - run: go vet ./...
+      - run: go test ./... -count=1
+      - uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de # v7.3.0
+        with:
+          version: "~> v2"
+          args: release --clean --release-notes ${{ runner.temp }}/release-notes.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Library with no binaries: replace the GoReleaser step with
+      #   - run: gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file "$RUNNER_TEMP/release-notes.md" --verify-tag
+      #     env: { GH_TOKEN: "${{ github.token }}" }
